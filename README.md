@@ -10,6 +10,7 @@ After launch it will:
 * Run `influxdb` and `grafana`
 * Application will run automatically after `influxdb` is started and healthy
 * Application will gather history and store it to `influxdb` using `./main history --from 2018-01-01 --to 2019-01-01` as run command
+* `CronD` in `app` container will run `./main update` every 6 hours and application will try to push new data from `https://api.exchangeratesapi.io/latest` ot `InfluxDB` 
 * You can open http://localhost:3000 in your browser to access `grafana`
 * Use `admin`/`admin` credentions
 * Navigate to "Manage" and then to "Currency" dashboard
