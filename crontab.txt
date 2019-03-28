@@ -1,0 +1,2 @@
+
+6 */6 * * * /app/main update >> /app/log.txt

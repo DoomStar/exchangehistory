@@ -2,7 +2,7 @@
 
 ### run the docker-compose
 
-`docker-compose up -d --build`
+`mkdir data/grafana ; chmod 777 data/grafana; docker-compose up -d --build`
 
 After launch it will: 
 

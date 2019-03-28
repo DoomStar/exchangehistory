@@ -46,7 +46,7 @@ services:
     command:
       - sh
       - -c
-      - ./main history --from 2018-01-01 --to 2019-01-01; while true; do sleep 60; done;
+      - ./main history --from 2018-01-01 --to 2019-01-01; /usr/sbin/crond -f -l 8
     restart: "no"
     depends_on:
       influxdb:
