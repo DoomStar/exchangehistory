@@ -35,3 +35,29 @@ I'm writing on this language for ~2 months and I enjoy learning it. So I decided
 ### Grafana
 
 It's so easy to display data from InfluxDB using grafana :)
+
+# Kubernetes
+
+```
+docker build -f Dockerfile_grafana -t docker-registry.ppdev.ru/app/grafana:latest .
+docker push docker-registry.ppdev.ru/app/grafana:latest
+docker tag exchangehistory_app docker-registry.ppdev.ru/app/app:1
+docker push docker-registry.ppdev.ru/app/app:1
+helm upgrade ./helm --install --kube-context stage --namespace app --set-file config_ini=config/config.ini --set build_id=1
+```
+
+After this application wil be deployed and filled with same history as on local deployment with docker-compose. 
+You can add to `/etc/hosts`:
+
+```
+<your ingress ip> grafana.app.check24dev.de
+```
+
+And you will be able to use grafana.
+
+To test cronjob run this:
+
+```
+kubectl --context stage --namespace app create job app-upd --from=cronjobs/app
+``` 
+

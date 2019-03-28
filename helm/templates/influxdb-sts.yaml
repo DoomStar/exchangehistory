@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: app
+    role: influxdb
+  name: influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+      role: influxdb
+  serviceName: influxdb
+  template:
+    metadata:
+      labels:
+        app: app
+        role: influxdb
+    spec:
+      containers:
+        - image: influxdb:latest
+          name: influxdb
+          env:
+            - name: "INFLUXDB_DATA_ENGINE"
+              value: "tsm1"
+            - name: "INFLUXDB_REPORTING_DISABLED"
+              value: "false"
+          ports:
+            - containerPort: 8086
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /status
+              port: 8086
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /status
+              port: 8086
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            requests:
+              memory: "1024Mi"
+              cpu: "300m"
+            limits:
+              memory: "2048Mi"
+              cpu: "1000m"
+          volumeMounts:
+            - mountPath: /var/lib/influxdb
+              name: data
+  volumeClaimTemplates:
+    - metadata:
+        labels:
+          app: app
+          role: influxdb
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
