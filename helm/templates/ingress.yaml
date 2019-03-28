@@ -1,0 +1,23 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tracking-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx-internal
+spec:
+  rules:
+  - host: "grafana.app.check24dev.de"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: app-grafana
+          servicePort: 3000
+  - host: "influxdb.app.check24dev.de"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: app-grafana
+          servicePort: 8086

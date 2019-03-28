@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: app
+  labels:
+    app: app
+    role: app
+    chart: {{ template "project.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  template:
+    metadata:
+      labels:
+        app: app
+        role: app
+    spec:
+      containers:
+      - name: app
+        image: docker-registry.ppdev.ru/app/app:{{ .Values.build_id }}
+        command:
+          - ./main
+          - history
+          - --from
+          - 2018-01-01
+          - --to
+          - 2019-01-01
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "100m"
+          limits:
+            memory: "1000Mi"
+            cpu: "500m"
+        volumeMounts:
+          - name: config-volume
+            mountPath: /app/config/
+      imagePullSecrets:
+      - name: regcred
+      restartPolicy: Never
+      initContainers:
+        - name: check-influxdb
+          image: "influxdb"
+          command: ["sh","-c","while true; do curl -f -m 5 http://influxdb:8086/status && exit 0; done;"]
+      volumes:
+        - name: config-volume
+          configMap:
+            name: config
+
+  backoffLimit: 0

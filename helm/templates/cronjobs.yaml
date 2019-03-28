@@ -1,0 +1,50 @@
+---
+kind: CronJob
+apiVersion: batch/v1beta1
+metadata:
+  name: app
+  creationTimestamp:
+  labels:
+    app: app
+    role: app
+    chart: {{ template "project.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  schedule: "6 */6 * * *"
+  concurrencyPolicy: Replace
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 0
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: app
+            role: app
+        spec:
+          containers:
+          - name: app
+            image: "docker-registry.ppdev.ru/app/app:{{ $.Values.build_id }}"
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "1000m"
+              limits:
+                memory: "1024Mi"
+                cpu: "1000m"
+            command:
+              - ./main
+              - update
+            volumeMounts:
+              - name: config-volume
+                mountPath: /app/config/
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: regcred
+          volumes:
+            - name: config-volume
+              configMap:
+                name: config
+

@@ -1,0 +1,14 @@
+apiVersion: v1
+name: app
+version: 0.1.0
+appVersion: "0.1.0"
+description: app
+keywords:
+- app
+home: https://github.com/DoomStar/exchangehistory
+sources:
+- https://github.com/DoomStar/exchangehistory
+maintainers:
+- name: Semion Spiridonov
+  email: doom@serverland.ru
+engine: gotpl
