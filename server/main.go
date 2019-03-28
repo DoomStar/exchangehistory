@@ -3,139 +3,69 @@
 // export QUOTE_PORT=80
 //
 
-package server
+package main
 
 import (
-	"database/sql"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	_ "github.com/lib/pq"
+	"encoding/json"
+	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/jessevdk/go-flags"
+	"io/ioutil"
 	"net/http"
-	"os"
 )
 
-type Quote struct {
-	Id    int    `json:"id"      form:"id"       `
-	Quote string `json:"quote"   form:"quote"   binding:"required"`
+type Point struct {
+	Currency  string `json:"id"      form:"id"       `
+	Value     string `json:"quote"   form:"quote"   binding:"required"`
+	Timestamp string `json:"quote"   form:"quote"   binding:"required"`
 }
-
-var db *sql.DB
-
-func setupRouter() *gin.Engine {
-
-	r := gin.Default()
-
-	r.GET("/quotes", func(c *gin.Context) {
-		var quote Quote
-		var quotes []Quote
-		var sqlQuery string
-		var rows *sql.Rows
-
-		var err error
-
-		sqlQuery = `SELECT id, quote FROM quotes`
-
-		rows, err = db.Query(sqlQuery)
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-			panic(err)
-			return
-		}
-
-		for rows.Next() {
-			err = rows.Scan(&quote.Id, &quote.Quote)
-			checkErr(err)
-			quotes = append(quotes, quote)
-		}
-
-		if len(quotes) > 0 {
-			c.JSON(http.StatusOK, quotes)
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "No quotes"})
-		}
-	})
-
-	r.POST("/quote", func(c *gin.Context) {
-		var quote Quote
-
-		if err := c.ShouldBindWith(&quote, binding.Form); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		_, err := db.Query(`INSERT INTO quotes (quote) VALUES ('` + quote.Quote + `')`)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Data(http.StatusOK, "text/html", []byte(`
-<html><body>Added:<br><p><i>`+quote.Quote+`</i></p><br>
-<form action="quote" method="POST">Enter new quote<br>
-<input type="text" style="width:400px" name="quote"> <input type="submit">
-</form><br><a href="/">Home</a><br><a href="quotes">all quotes</a></body></html>`))
-	})
-
-	r.GET("/", func(c *gin.Context) {
-		var quote Quote
-		sqlQuery := `SELECT id, quote FROM quotes ORDER BY RANDOM() LIMIT 1`
-		row := db.QueryRow(sqlQuery)
-		err := row.Scan(&quote.Id, &quote.Quote)
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-			panic(err)
-			return
-		}
-		c.Data(http.StatusOK, "text/html", []byte(`
-<html><body><p><i>`+quote.Quote+`</i></p><br>
-<form action="quote" method="POST">Enter new quote<br>
-<input type="text" style="width:400px" name="quote"> <input type="submit">
-</form><br><a href="quotes">all quotes</a></body></html>`))
-	})
-
-	return r
+type ApiSingle struct {
+	Base  string `json:"base"`
+	Date  string `json:"date"`
+	Rates Rates  `json:"rates"`
 }
+type ApiMultiple struct {
+	Base      string  `json:"base"`
+	StartDate string  `json:"date"`
+	EndDate   string  `json:"date"`
+	History   History `json:"rates"`
+}
+type Rates map[string]float32
+type History map[string]Rates
+
+const api_url = "https://api.exchangeratesapi.io"
 
 func main() {
-	var err error
-	db, err = sql.Open("postgres", os.Getenv("QUOTE_DSN"))
-	_, err = db.Query(`SELECT 1 FROM quotes`)
-	if err != nil && err.Error() == `pq: relation "quotes" does not exist` {
-		_, err = db.Query(`
-			CREATE TABLE quotes
-			(
-			    id SERIAL PRIMARY KEY,
-			    quote    VARCHAR(256)
-			);
-            INSERT INTO quotes (quote) VALUES ('"It''s not fully shipped until it''s fast."');
-            INSERT INTO quotes (quote) VALUES ('"Practicality beats purity."');
-            INSERT INTO quotes (quote) VALUES ('"Avoid administrative distraction."');
-            INSERT INTO quotes (quote) VALUES ('"Mind your words, they are important."');
-            INSERT INTO quotes (quote) VALUES ('"Non-blocking is better than blocking."');
-            INSERT INTO quotes (quote) VALUES ('"Design for failure."');
-            INSERT INTO quotes (quote) VALUES ('"Half measures are as bad as nothing at all."');
-            INSERT INTO quotes (quote) VALUES ('"Favor focus over features."');
-            INSERT INTO quotes (quote) VALUES ('"Approachable is better than simple."');
-            INSERT INTO quotes (quote) VALUES ('"Encourage flow."');
-            INSERT INTO quotes (quote) VALUES ('"Anything added dilutes everything else."');
-            INSERT INTO quotes (quote) VALUES ('"Speak like a human."');
-            INSERT INTO quotes (quote) VALUES ('"Responsive is better than fast."');
-            INSERT INTO quotes (quote) VALUES ('"Keep it logically awesome."');
-		`)
+
+	var opts struct {
+		DateFrom string `short:"f" long:"from" description:"Date to start from" required:"true"`
+		DateTO   string `short:"t" long:"to"   description:"Date to end at"     required:"true"`
+
+		Args struct {
+			Action string
+		} `positional-args:"yes" required:"yes"`
 	}
+
+	_, err := flags.Parse(&opts)
+
 	checkErr(err)
 
-	defer func() {
-		err = db.Close()
+	if opts.Args.Action == "history" {
+		var multiple ApiMultiple
+		response, err := http.Get(api_url + "/history?start_at=" + opts.DateFrom + "&end_at=" + opts.DateTO)
 		checkErr(err)
-	}()
+		defer response.Body.Close()
+		body, err := ioutil.ReadAll(response.Body)
+		json.Unmarshal(body, &multiple)
+		for date, rates := range multiple.History {
+			spew.Dump(date)
+			spew.Dump(rates)
+			for currency_name, value := range rates {
+				fmt.Println(currency_name, value, date)
+			}
+		}
+	}
 
-	r := setupRouter()
-	err = r.Run(":" + os.Getenv("QUOTE_PORT"))
-	checkErr(err)
 }
 
 func checkErr(err error) {

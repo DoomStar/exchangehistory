@@ -3,20 +3,18 @@
 // export QUOTE_PORT=80
 //
 
-package main
+package exchangehistory
 
 import (
 	"encoding/json"
 	"fmt"
-	//"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-ini/ini"
 	"github.com/influxdata/influxdb1-client"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 type Point struct {
@@ -70,55 +68,19 @@ func main() {
 
 	influxdb.SetAuth(cfg.Section("influxdb").Key("user").String(), cfg.Section("influxdb").Key("pass").String())
 
-	// create the db instance here
-	influxdb.Query(client.Query{
-		Command:  fmt.Sprintf("create database %s", cfg.Section("influxdb").Key("name").String()),
-		Database: cfg.Section("influxdb").Key("name").String(),
-	})
-
-	// set infinite retension policy
-	//influxdb.Query(client.Query{
-	//	Command:  fmt.Sprintf("CREATE RETENTION POLICY rates ON %s DURATION INF REPLICATION 1", cfg.Section("influxdb").Key("name").String()),
-	//	Database: cfg.Section("influxdb").Key("name").String(),
-	//})
-
 	if opts.Args.Action == "history" {
 		var multiple ApiMultiple
-		var points []client.Point
 		response, err := http.Get(api_url + "/history?start_at=" + opts.DateFrom + "&end_at=" + opts.DateTO)
 		checkErr(err)
 		defer response.Body.Close()
 		body, err := ioutil.ReadAll(response.Body)
 		json.Unmarshal(body, &multiple)
 		for date, rates := range multiple.Hist {
-			//spew.Dump(date)
-			//spew.Dump(rates)
-			time, err := time.Parse(time.RFC3339, date+"T12:00:00+01:00")
-			checkErr(err)
+			spew.Dump(date)
+			spew.Dump(rates)
 			for currency_name, value := range rates {
-				//fmt.Println(currency_name, value, date)
-				points = append(points, client.Point{
-					Measurement: "rate",
-					Tags: map[string]string{
-						"currency": currency_name,
-						"base":     multiple.Base,
-					},
-					Fields: map[string]interface{}{
-						"value": value,
-					},
-					Time: time,
-				})
+				fmt.Println(currency_name, value, date)
 			}
-		}
-		bps := client.BatchPoints{
-			Points:          points,
-			Database:        cfg.Section("influxdb").Key("name").String(),
-			RetentionPolicy: "autogen",
-		}
-
-		if _, err := influxdb.Write(bps); err != nil {
-			log.Println("Insert data error:")
-			checkErr(err)
 		}
 	}
 
