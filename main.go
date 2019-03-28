@@ -8,22 +8,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	//"github.com/davecgh/go-spew/spew"
 	"github.com/go-ini/ini"
-	"github.com/influxdata/influxdb1-client"
+	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 )
 
-type Point struct {
-	Currency  string `json:"id"      form:"id"       `
-	Value     string `json:"quote"   form:"quote"   binding:"required"`
-	Timestamp string `json:"quote"   form:"quote"   binding:"required"`
-}
 type ApiSingle struct {
 	Base  string `json:"base"`
 	Date  string `json:"date"`
@@ -40,83 +36,129 @@ type History map[string]Rates
 
 const api_url = "https://api.exchangeratesapi.io"
 
+func influxDBClient(cfg *ini.File) client.Client {
+	c, err := client.NewHTTPClient(client.HTTPConfig{
+		Addr:     fmt.Sprintf("http://%s:%s", cfg.Section("influxdb").Key("host").String(), cfg.Section("influxdb").Key("port").String()),
+		Username: cfg.Section("influxdb").Key("user").String(),
+		Password: cfg.Section("influxdb").Key("pass").String(),
+	})
+	if err != nil {
+		log.Fatalln("Error: ", err)
+	}
+	return c
+}
+
 func main() {
 
-	var influxdb *client.Client
-
 	var opts struct {
-		DateFrom string `short:"f" long:"from" description:"Date to start from" required:"true"`
-		DateTO   string `short:"t" long:"to"   description:"Date to end at"     required:"true"`
+		DateFrom string `short:"f" long:"from" description:"Date to start from"`
+		DateTO   string `short:"t" long:"to"   description:"Date to end at"`
 
 		Args struct {
 			Action string
-		} `positional-args:"yes" required:"yes"`
+		} `positional-args:"yes"`
 	}
 
 	_, err := flags.Parse(&opts)
 	checkErr(err)
 
-	cfg, err := ini.Load("config.ini")
-
-	u, err := url.Parse(fmt.Sprintf("http://%s:%s", cfg.Section("influxdb").Key("host").String(), cfg.Section("influxdb").Key("port").String()))
-	checkErr(err)
-
-	influxdb, err = client.NewClient(client.Config{URL: *u})
-	checkErr(err)
-
-	if _, _, err := influxdb.Ping(); err != nil {
-		checkErr(err)
+	if opts.Args.Action != "history" && opts.Args.Action != "update" {
+		fmt.Println("Usage: You should provide argument 'history' or 'update'")
 	}
 
-	influxdb.SetAuth(cfg.Section("influxdb").Key("user").String(), cfg.Section("influxdb").Key("pass").String())
+	cfg, err := ini.Load("config/config.ini")
 
+	influxdb := influxDBClient(cfg)
+	checkErr(err)
+
+	if _, _, err := influxdb.Ping(5); err != nil {
+		checkErr(err)
+	}
 	// create the db instance here
 	influxdb.Query(client.Query{
 		Command:  fmt.Sprintf("create database %s", cfg.Section("influxdb").Key("name").String()),
 		Database: cfg.Section("influxdb").Key("name").String(),
 	})
 
-	// set infinite retension policy
-	//influxdb.Query(client.Query{
-	//	Command:  fmt.Sprintf("CREATE RETENTION POLICY rates ON %s DURATION INF REPLICATION 1", cfg.Section("influxdb").Key("name").String()),
-	//	Database: cfg.Section("influxdb").Key("name").String(),
-	//})
-
 	if opts.Args.Action == "history" {
+		if len(opts.DateFrom) < 1 || len(opts.DateTO) < 1 {
+			fmt.Println("Usage: history --from 2018-01-01 --to 2019-01-03")
+			os.Exit(1)
+		}
 		var multiple ApiMultiple
-		var points []client.Point
+		bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+			Database:  cfg.Section("influxdb").Key("name").String(),
+			Precision: "h",
+		})
+		checkErr(err)
+
 		response, err := http.Get(api_url + "/history?start_at=" + opts.DateFrom + "&end_at=" + opts.DateTO)
 		checkErr(err)
 		defer response.Body.Close()
+
 		body, err := ioutil.ReadAll(response.Body)
-		json.Unmarshal(body, &multiple)
+		checkErr(err)
+
+		err = json.Unmarshal(body, &multiple)
+		checkErr(err)
+
 		for date, rates := range multiple.Hist {
-			//spew.Dump(date)
-			//spew.Dump(rates)
-			time, err := time.Parse(time.RFC3339, date+"T12:00:00+01:00")
+			timestamp, err := time.Parse(time.RFC3339, date+"T12:00:00+01:00")
 			checkErr(err)
 			for currency_name, value := range rates {
-				//fmt.Println(currency_name, value, date)
-				points = append(points, client.Point{
-					Measurement: "rate",
-					Tags: map[string]string{
-						"currency": currency_name,
-						"base":     multiple.Base,
-					},
-					Fields: map[string]interface{}{
-						"value": value,
-					},
-					Time: time,
-				})
+				tags := map[string]string{
+					"currency": currency_name,
+					"base":     multiple.Base,
+				}
+				values := map[string]interface{}{
+					"value": value,
+				}
+				point, err := client.NewPoint("rate", tags, values, timestamp)
+				checkErr(err)
+				bp.AddPoint(point)
 			}
 		}
-		bps := client.BatchPoints{
-			Points:          points,
-			Database:        cfg.Section("influxdb").Key("name").String(),
-			RetentionPolicy: "autogen",
+
+		if err := influxdb.Write(bp); err != nil {
+			log.Println("Insert data error:")
+			checkErr(err)
+		}
+	}
+
+	if opts.Args.Action == "update" {
+		var single ApiSingle
+		bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+			Database:  cfg.Section("influxdb").Key("name").String(),
+			Precision: "h",
+		})
+		checkErr(err)
+
+		response, err := http.Get(api_url + "/latest")
+		checkErr(err)
+		defer response.Body.Close()
+
+		body, err := ioutil.ReadAll(response.Body)
+		checkErr(err)
+
+		err = json.Unmarshal(body, &single)
+		checkErr(err)
+
+		timestamp, err := time.Parse(time.RFC3339, single.Date+"T12:00:00+01:00")
+		checkErr(err)
+		for currency_name, value := range single.Rates {
+			tags := map[string]string{
+				"currency": currency_name,
+				"base":     single.Base,
+			}
+			values := map[string]interface{}{
+				"value": value,
+			}
+			point, err := client.NewPoint("rate", tags, values, timestamp)
+			checkErr(err)
+			bp.AddPoint(point)
 		}
 
-		if _, err := influxdb.Write(bps); err != nil {
+		if err := influxdb.Write(bp); err != nil {
 			log.Println("Insert data error:")
 			checkErr(err)
 		}

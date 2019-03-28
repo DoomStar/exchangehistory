@@ -1,4 +1,4 @@
-version: '3'
+version: '3.1'
 services:
   influxdb:
     image: influxdb:latest
@@ -14,17 +14,38 @@ services:
       # Data persistency
       # sudo mkdir -p /srv/docker/influxdb/data
       - ./data/influxdb:/var/lib/influxdb
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
-    environment:
-      GF_INSTALL_PLUGINS: "grafana-clock-panel,briangann-gauge-panel,natel-plotly-panel,grafana-simple-json-datasource"
-    links:
-      - influxdb
     volumes:
       # Data persistency
       # sudo mkdir -p /srv/docker/grafana/data; chown 472:472 /srv/docker/grafana/data
       - ./data/grafana:/var/lib/grafana
+      - ./provision/grafana:/etc/grafana/provisioning
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  app:
+    container_name: app
+    build:
+      context: .
+    command: "./main history --from 2018-01-01 --to 2019-01-01"
+    restart: "no"
+    depends_on:
+      - influxdb

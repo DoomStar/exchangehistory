@@ -1,0 +1,482 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 1,
+  "iteration": 1553800073762,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "InfluxDB",
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "currency"
+              ],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "rate",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "query": "SELECT \"value\" FROM \"rate\" WHERE (\"currency\" =~ /^$Currency$/) AND $timeFilter GROUP BY \"currency\"",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "currency",
+              "operator": "=~",
+              "value": "/^$Currency$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Value",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "currency"
+              ],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "rate",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "query": "SELECT mean(\"value\") FROM \"rates\".\"rate\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "difference"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "currency",
+              "operator": "=~",
+              "value": "/^$Currency$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Difference",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 18,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "USD",
+          "value": [
+            "USD"
+          ]
+        },
+        "datasource": "InfluxDB",
+        "definition": "SHOW TAG VALUES WITH KEY = \"currency\"",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "Currency",
+        "options": [
+          {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "AUD",
+            "value": "AUD"
+          },
+          {
+            "selected": false,
+            "text": "BGN",
+            "value": "BGN"
+          },
+          {
+            "selected": false,
+            "text": "BRL",
+            "value": "BRL"
+          },
+          {
+            "selected": false,
+            "text": "CAD",
+            "value": "CAD"
+          },
+          {
+            "selected": false,
+            "text": "CHF",
+            "value": "CHF"
+          },
+          {
+            "selected": false,
+            "text": "CNY",
+            "value": "CNY"
+          },
+          {
+            "selected": false,
+            "text": "CZK",
+            "value": "CZK"
+          },
+          {
+            "selected": false,
+            "text": "DKK",
+            "value": "DKK"
+          },
+          {
+            "selected": false,
+            "text": "GBP",
+            "value": "GBP"
+          },
+          {
+            "selected": false,
+            "text": "HKD",
+            "value": "HKD"
+          },
+          {
+            "selected": false,
+            "text": "HRK",
+            "value": "HRK"
+          },
+          {
+            "selected": false,
+            "text": "HUF",
+            "value": "HUF"
+          },
+          {
+            "selected": false,
+            "text": "IDR",
+            "value": "IDR"
+          },
+          {
+            "selected": false,
+            "text": "ILS",
+            "value": "ILS"
+          },
+          {
+            "selected": false,
+            "text": "INR",
+            "value": "INR"
+          },
+          {
+            "selected": false,
+            "text": "JPY",
+            "value": "JPY"
+          },
+          {
+            "selected": false,
+            "text": "KRW",
+            "value": "KRW"
+          },
+          {
+            "selected": false,
+            "text": "MXN",
+            "value": "MXN"
+          },
+          {
+            "selected": false,
+            "text": "MYR",
+            "value": "MYR"
+          },
+          {
+            "selected": false,
+            "text": "NOK",
+            "value": "NOK"
+          },
+          {
+            "selected": false,
+            "text": "NZD",
+            "value": "NZD"
+          },
+          {
+            "selected": false,
+            "text": "PHP",
+            "value": "PHP"
+          },
+          {
+            "selected": false,
+            "text": "PLN",
+            "value": "PLN"
+          },
+          {
+            "selected": false,
+            "text": "RON",
+            "value": "RON"
+          },
+          {
+            "selected": false,
+            "text": "RUB",
+            "value": "RUB"
+          },
+          {
+            "selected": false,
+            "text": "SEK",
+            "value": "SEK"
+          },
+          {
+            "selected": false,
+            "text": "SGD",
+            "value": "SGD"
+          },
+          {
+            "selected": false,
+            "text": "THB",
+            "value": "THB"
+          },
+          {
+            "selected": false,
+            "text": "TRY",
+            "value": "TRY"
+          },
+          {
+            "selected": true,
+            "text": "USD",
+            "value": "USD"
+          },
+          {
+            "selected": false,
+            "text": "ZAR",
+            "value": "ZAR"
+          }
+        ],
+        "query": "SHOW TAG VALUES WITH KEY = \"currency\"",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Currency",
+  "uid": "tPuv07emk",
+  "version": 3
+}
